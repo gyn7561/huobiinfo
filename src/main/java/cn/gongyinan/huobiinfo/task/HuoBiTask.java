@@ -17,6 +17,12 @@ public class HuoBiTask {
 
     private int lastId = 0;
     private int lastPrice = 0;
+    private int pushId = 0;
+
+    public int getLastId() {
+        return pushId;
+    }
+
 
     @Scheduled(cron = "0/5 * *  * * ? ")
     private void fetch() {
@@ -32,6 +38,10 @@ public class HuoBiTask {
                 JSONArray data = jsonObject.getJSONArray("data");
                 int diff = data.getJSONObject(1).getInteger("fixedPrice") - data.getJSONObject(0).getInteger("fixedPrice");
                 if (diff > 1000 && (data.getJSONObject(1).getInteger("id") != lastId || data.getJSONObject(0).getInteger("fixedPrice") != lastPrice)) {
+                    if (data.getJSONObject(0).getInteger("fixedPrice") != 0) {
+                        pushId = data.getJSONObject(1).getInteger("id");
+                        //TODO 通知客户端
+                    }
                     FileUtils.write(new File("record.html"), "<p><span>" + new Date() + "</span><span>前两笔差值：</span> <span class='diff'>" + diff + "</span> 价格:" + data.getJSONObject(0).getInteger("fixedPrice") + "  <a href='json?filename=" + logFile + "' target='_blank'>详细Json记录</a> <a href='https://otc.huobi.pro/#/tradeInfo?id=" + data.getJSONObject(0).getInteger("id") + "'>交易地址</a></p>\r\n", true);
                 }
                 lastPrice = data.getJSONObject(0).getInteger("fixedPrice");
@@ -48,7 +58,6 @@ public class HuoBiTask {
                 e1.printStackTrace();
             }
         }
-
     }
 
     public String getRecordHtml() {
@@ -69,6 +78,9 @@ public class HuoBiTask {
 
 
     public String getJson(String fileName) {
+        if (fileName.contains("/") || fileName.contains("\\")) {
+            return "";
+        }
         try {
             return FileUtils.readFileToString(new File("json/" + fileName));
         } catch (IOException e) {
